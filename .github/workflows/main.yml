@@ -1,0 +1,48 @@
+name: Docker Pull and Push with Cache
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  ACR_LOGIN_SERVER: tkxelcache.azurecr.io
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Cache Docker layers
+        id: cache-docker
+        uses: actions/cache@v3
+        with:
+          path: /var/lib/docker
+          key: ${{ runner.os }}-docker-${{ hashFiles('**/Dockerfile') }}
+
+      - name: Docker pull
+        if: steps.cache-docker.outputs.cache-hit != 'true'
+        run: |
+          docker pull mcr.microsoft.com/dotnet/aspnet:7.0
+          docker pull mcr.microsoft.com/dotnet/sdk:7.0
+
+      - name: Tag Docker images
+        run: |
+          docker tag mcr.microsoft.com/dotnet/aspnet:7.0 ${{ env.ACR_LOGIN_SERVER }}/dotnet/aspnet:7.0
+          docker tag mcr.microsoft.com/dotnet/sdk:7.0 ${{ env.ACR_LOGIN_SERVER }}/dotnet/sdk:7.0
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Push Docker images to ACR
+        run: |
+          docker push ${{ env.ACR_LOGIN_SERVER }}/dotnet/aspnet:7.0
+          docker push ${{ env.ACR_LOGIN_SERVER }}/dotnet/sdk:7.0
+

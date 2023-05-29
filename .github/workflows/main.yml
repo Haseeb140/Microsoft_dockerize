@@ -1,6 +1,8 @@
 name: Build Docker image
 on:
-  push: main
+  push:
+    branches:
+      - main
 jobs:
   build-with-docker:
     name: Build with Docker
@@ -13,8 +15,6 @@ jobs:
           context: .
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-
 
 
 
